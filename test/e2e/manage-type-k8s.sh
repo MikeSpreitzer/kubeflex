@@ -23,6 +23,9 @@ source "${SRC_DIR}/setup-shell.sh"
 : -------------------------------------------------------------------------
 : Create a ControlPlane of type k8s
 :
+kubectl config current-context
+yq '.contexts.[] | select(.context.extensions)' ${KUBECONFIG:-~/.kube/config}
+yq .extensions ${KUBECONFIG:-~/.kube/config}
 ./bin/kflex create cp1 --type k8s --chatty-status=false
 
 :
