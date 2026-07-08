@@ -18,6 +18,7 @@ package shared
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -32,7 +33,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	clog "sigs.k8s.io/controller-runtime/pkg/log"
 
-	"errors"
 	"github.com/kubestellar/kubeflex/api/v1alpha1"
 	"github.com/kubestellar/kubeflex/pkg/util"
 )
@@ -151,7 +151,7 @@ func (r *BaseReconciler) ReconcileUpdatePostCreateHook(ctx context.Context, hcp 
 
 		// Check if newly applied resources are ready (if enabled)
 		if hcp.Spec.WaitForPostCreateHooks != nil && *hcp.Spec.WaitForPostCreateHooks {
-			ready, err := r.checkAppliedResourcesReady(ctx, appliedResources, namespace)
+			unready, err := r.checkAppliedResourcesReady(ctx, appliedResources, namespace)
 			if err != nil {
 				if util.IsTransientError(err) {
 					errs = append(errs, fmt.Errorf("transient error checking readiness for hook %s: %w", hookName, err))
@@ -163,8 +163,8 @@ func (r *BaseReconciler) ReconcileUpdatePostCreateHook(ctx context.Context, hcp 
 				allResourcesReady = false
 				continue
 			}
-			if !ready {
-				logger.Info("Resources not ready yet for hook", "hook", hookName)
+			if len(unready) > 0 {
+				logger.Info("Resources not ready yet for hook", "hook", hookName, "resources", unready)
 				allResourcesReady = false
 				// Don't mark hook as applied yet - will retry
 				continue
@@ -350,18 +350,20 @@ func (r *BaseReconciler) applyPostCreateHook(ctx context.Context, clientSet *kub
 	return appliedResources, nil
 }
 
-// checkAppliedResourcesReady checks if all newly applied resources are ready
-func (r *BaseReconciler) checkAppliedResourcesReady(ctx context.Context, resources []ResourceInfo, namespace string) (bool, error) {
+// checkAppliedResourcesReady checks if all newly applied resources are ready,
+// and returns the unready ones.
+func (r *BaseReconciler) checkAppliedResourcesReady(ctx context.Context, resources []ResourceInfo, namespace string) ([]ResourceInfo, error) {
+	var ans []ResourceInfo
 	for _, resource := range resources {
 		ready, err := r.checkResourceStatus(ctx, resource.GVR, resource.Name, namespace, resource.Kind)
 		if err != nil {
-			return false, err
+			return ans, err
 		}
 		if !ready {
-			return false, nil
+			ans = append(ans, resource)
 		}
 	}
-	return true, nil
+	return ans, nil
 }
 
 // checkResourceStatus checks if a specific resource is ready based on its type
