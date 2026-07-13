@@ -105,7 +105,7 @@ type ControlPlaneReconciler struct {
 func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := clog.FromContext(ctx)
 
-	log.Info("Got ControlPlane event!")
+	log.Info("Got ControlPlane event!", "req", req)
 
 	// Fetch the hostedControlPlane instance
 	hostedControlPlane := &tenancyv1alpha1.ControlPlane{}

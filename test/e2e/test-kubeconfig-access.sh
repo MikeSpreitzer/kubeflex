@@ -101,7 +101,14 @@ spec:
           containers:
           - name: kubeconfig-tester
             image: quay.io/kubestellar/kubectl:1.30.14
-            command: ["kubectl", "--kubeconfig=/root/.kube/${SECRET_KEY}", "get", "namespace", "kube-system"]
+            command:
+            - bash
+            - "-c"
+            - |
+              ls -lad /root/.kube/${SECRET_KEY}
+              cat /root/.kube/${SECRET_KEY}
+              echo ====
+              kubectl --kubeconfig=/root/.kube/${SECRET_KEY} get ns kube-system
             volumeMounts:
             - name: kubeconfig-volume
               mountPath: "/root/.kube"

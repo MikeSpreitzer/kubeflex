@@ -25,6 +25,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -323,16 +324,46 @@ func (r *BaseReconciler) applyPostCreateHook(ctx context.Context, clientSet *kub
 			return nil, err
 		}
 
-		logger.Info("Applying", "object", util.GenerateObjectInfoString(*obj), "cpNamespace", namespace)
-
-		// Apply the resource
+		olog := logger.WithValues("hook", hook.Name, "object", util.GenerateObjectInfoString(*obj), "cpNamespace", namespace)
+		var rscIfc dynamic.ResourceInterface
 		if clusterScoped {
 			r.setTrackingLabelsAndAnnotations(obj, hcp.Name)
-			_, err = dynamicClient.Resource(gvr).Apply(ctx, obj.GetName(), obj, metav1.ApplyOptions{FieldManager: FieldManager})
+			rscIfc = dynamicClient.Resource(gvr)
 		} else {
-			_, err = dynamicClient.Resource(gvr).Namespace(namespace).Apply(ctx, obj.GetName(), obj, metav1.ApplyOptions{FieldManager: FieldManager})
+			rscIfc = dynamicClient.Resource(gvr).Namespace(namespace)
 		}
-		if err != nil {
+		found, err := rscIfc.Get(ctx, obj.GetName(), metav1.GetOptions{})
+		if err == nil {
+			doApply := true
+			merged := found.DeepCopy().UnstructuredContent()
+			mergedAny, err := util.MergePatch(merged, obj.UnstructuredContent())
+			if err != nil {
+				olog.Info("Failed to merge patch found object", "err", err)
+			} else if hasDiff, lVal, rVal, path, descr := util.FindADiff(found.UnstructuredContent(), mergedAny); hasDiff {
+				olog.Info("Found existing object from PCH template, with wrong content", "resourceVersion", found.GetResourceVersion(), "foundVal", lVal, "desiredVal", rVal, "where", path, "difference", descr)
+			} else {
+				doApply = false
+			}
+			if doApply {
+				echo, err := rscIfc.Apply(ctx, obj.GetName(), obj, metav1.ApplyOptions{FieldManager: FieldManager})
+				if err != nil {
+					olog.Info("Failed to apply PCH template to existing object", "resourceVersion", found.GetResourceVersion(), "err", err)
+					return nil, err
+				}
+				olog.Info("Applied PCH template to existing object", "newResourceVersion", echo.GetResourceVersion())
+			} else {
+				olog.Info("Found existing object and it already has the desired content", "resourceVersion", found.GetResourceVersion())
+			}
+		} else if apierrors.IsNotFound(err) {
+			echo, err := rscIfc.Create(ctx, obj, metav1.CreateOptions{FieldManager: FieldManager})
+			if err == nil {
+				olog.Info("Created object from PCH template", "resourceVersion", echo.GetResourceVersion())
+			} else {
+				olog.Info("Failed to create object from PCH template", "err", err)
+				return nil, err
+			}
+		} else {
+			olog.Info("Failed to fetch object from PCH template", "err", err)
 			return nil, err
 		}
 
