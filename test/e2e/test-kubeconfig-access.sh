@@ -72,6 +72,9 @@ esac
 
 echo "Using secret: $SECRET_NAME with key: $SECRET_KEY for $CP_TYPE"
 
+: Document server version
+kubectl --context "$host_context" version
+
 :
 : -------------------------------------------------------------------------
 : Clean up any existing resources
@@ -105,7 +108,8 @@ spec:
             - bash
             - "-c"
             - |
-              ls -lad /root/.kube/${SECRET_KEY}
+              ls -lad  /root/.kube/${SECRET_KEY}
+              ls -ladL /root/.kube/${SECRET_KEY}
               cat /root/.kube/${SECRET_KEY}
               echo ====
               kubectl --kubeconfig=/root/.kube/${SECRET_KEY} get ns kube-system

@@ -133,7 +133,7 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			controllerutil.RemoveFinalizer(hcp, kfFinalizer)
 			err := r.Update(ctx, hcp)
 			if err != nil {
-				return ctrl.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
+				return ctrl.Result{}, fmt.Errorf("failed to remove finalizer (cp.UID=%q): %w", hcp.UID, err)
 			}
 		}
 		return ctrl.Result{}, nil

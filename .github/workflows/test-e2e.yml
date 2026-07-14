@@ -84,13 +84,21 @@ jobs:
         if: always()
         run: kubectl --context ${{ matrix.cluster-type }}-kubeflex get -A jobs -o yaml
 
-      - name: Dump kubeflex system Pod objects
+      - name: Dump all Pod objects
         if: always()
-        run: kubectl --context ${{ matrix.cluster-type }}-kubeflex -n kubeflex-system get pods -o yaml
+        run: kubectl --context ${{ matrix.cluster-type }}-kubeflex get -A pods -o yaml
 
       - name: Dump all Kubernetes event objects
         if: always()
         run: kubectl --context ${{ matrix.cluster-type }}-kubeflex get -A events --sort-by='.lastTimestamp'
+
+      - name: Dump all Service objects
+        if: always()
+        run: kubectl --context ${{ matrix.cluster-type }}-kubeflex get -A services -o yaml
+
+      - name: Dump all EndpointSlice objects
+        if: always()
+        run: kubectl --context ${{ matrix.cluster-type }}-kubeflex get -A endpointslices -o yaml
 
       - name: Dump kubeflex Pod logs
         if: always()

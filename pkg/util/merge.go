@@ -69,6 +69,8 @@ func MergePatch(orig, patch any) (any, error) {
 		}
 	case bool, float64, string, nil:
 		return patch, nil
+	case int64: // found in a parsed template of a PostCreateHook
+		return patch, nil
 	default:
 		return nil, fmt.Errorf("orig is a %T, which is not valid as unmarshaled JSON", orig)
 	}
