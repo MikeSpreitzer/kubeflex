@@ -522,7 +522,7 @@ func (r *BaseReconciler) propagateLabels(hook *v1alpha1.PostCreateHook, hcp *v1a
 	if updateRequired {
 		hcp.SetLabels(hcpLabels)
 		if err := c.Update(context.TODO(), hcp, &client.SubResourceUpdateOptions{}); err != nil {
-			return err
+			return fmt.Errorf("failed to update CP with PCH labels: %w", err)
 		}
 	}
 

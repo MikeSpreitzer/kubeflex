@@ -18,6 +18,7 @@ package vcluster
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -194,7 +195,7 @@ func (r *VClusterReconciler) addOwnerReference(ctx context.Context, hcp *tenancy
 	}
 
 	if err := r.Client.Update(context.TODO(), statefulset, &client.UpdateOptions{}); err != nil {
-		return err
+		return fmt.Errorf("failed to VClusterReconciler.addOwnerReference: %w", err)
 	}
 
 	return nil

@@ -18,6 +18,7 @@ package shared
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -107,7 +108,7 @@ func (r *BaseReconciler) UpdateStatusForSyncingSuccess(ctx context.Context, hcp 
 	tenancyv1alpha1.EnsureCondition(hcp, tenancyv1alpha1.ConditionReconcileSuccess())
 	if err := r.Status().Update(context.Background(), hcp); err != nil {
 		log.Error(err, "update status for syncing success failed")
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("failed to write syncing success: %w", err)
 	}
 	log.Info("update status for syncing success is done")
 	return ctrl.Result{}, nil

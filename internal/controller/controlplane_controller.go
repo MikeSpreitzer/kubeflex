@@ -105,7 +105,7 @@ type ControlPlaneReconciler struct {
 func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := clog.FromContext(ctx)
 
-	log.Info("Got ControlPlane event!", "req", req)
+	log.Info("Got ControlPlane event!")
 
 	// Fetch the hostedControlPlane instance
 	hostedControlPlane := &tenancyv1alpha1.ControlPlane{}
@@ -133,7 +133,7 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			controllerutil.RemoveFinalizer(hcp, kfFinalizer)
 			err := r.Update(ctx, hcp)
 			if err != nil {
-				return ctrl.Result{}, err
+				return ctrl.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
 			}
 		}
 		return ctrl.Result{}, nil
@@ -143,7 +143,7 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		controllerutil.AddFinalizer(hcp, kfFinalizer)
 		err = r.Update(ctx, hcp)
 		if err != nil {
-			return ctrl.Result{}, err
+			return ctrl.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
 		}
 	}
 
